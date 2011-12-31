@@ -30,6 +30,7 @@ module Wildcloud
     handler.new.start
   rescue Exception => e
     logger.error(e)
+    File.open('/var/build.done', 'w') { |file| file.write('FAIL') }
   end
 
   class Builder
@@ -40,7 +41,7 @@ module Wildcloud
       @build = YAML::load_file('/root/build.yml')
 
       Wildcloud.logger.info('Cloning git repository')
-      Wildcloud.logger.info(`git clone #{@build[:repository]} /home/wildcloud`)
+      Wildcloud.logger.info(`git clone #{@build[:repository]} /home/wildcloud 2>&1`)
 
       Wildcloud.logger.info('Moving into application directory')
       Dir.chdir('/home/wildcloud')
@@ -60,6 +61,7 @@ module Wildcloud
         builder = "build_#{name}".to_sym
         send(builder, config) if respond_to?(builder)
       end if @config['modules']
+      FileUtils.chown_R('wildcloud', 'wildcloud', '.')
       File.open('/var/build.done', 'w') { |file| file.write('OK') }
       Wildcloud.logger.info('Build finished')
     end
